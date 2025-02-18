@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Waveform Visualizer</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid white;
+            width: 80%;
+            max-width: 800px;
+            background: black;
+        }
+    </style>
+</head>
+<body>
+    <audio id="audio" controls>
+        <source src="your-audio.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const audio = document.getElementById("audio");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth * 0.8;
+        canvas.height = 200;
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        analyser.fftSize = 2048;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        function drawWaveform() {
+            requestAnimationFrame(drawWaveform);
+            analyser.getByteTimeDomainData(dataArray);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#00ff00";
+            ctx.beginPath();
+            const sliceWidth = canvas.width / bufferLength;
+            let x = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * canvas.height / 2;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                x += sliceWidth;
+            }
+            ctx.stroke();
+        }
+
+        audio.addEventListener("play", () => {
+            if (audioContext.state === "suspended") {
+                audioContext.resume();
+            }
+            drawWaveform();
+        });
+    </script>
+</body>
+</html>
